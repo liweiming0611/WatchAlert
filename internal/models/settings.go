@@ -8,6 +8,7 @@ import (
 const (
 	SettingSystemAuth = 0
 	SettingLdapAuth   = 1
+	SettingOidcAuth   = 2
 )
 
 type Settings struct {
@@ -139,6 +140,24 @@ type OidcConfig struct {
 	UpperURI     string `json:"upperURI"`
 	RedirectURI  string `json:"redirectURI"`
 	Domain       string `json:"domain"`
+	// Scope 授权请求使用的 scope, 为空时回落到 oidc.DefaultScope("openid profile email")。
+	Scope string `json:"scope"`
+	// TokenAuthMethod 是换 token 时客户端凭据的传递方式。
+	// 留空(auto)按 IdP Discovery 声明的 token_endpoint_auth_methods_supported 自动选择:
+	// Azure AD / Auth0 / Okta / Google 等要求 client_secret_basic(HTTP Basic),
+	// 部分自建 IdP 只接受 client_secret_post(表单参数), 公共客户端为 none。
+	TokenAuthMethod string `json:"tokenAuthMethod"`
+	// PostLogoutRedirectURI 是 RP-Initiated Logout 完成后 IdP 回跳的地址。
+	// 留空表示只清本地登录态、不跳转 IdP 登出端点(部分 IdP 未登记该地址时会报错)。
+	PostLogoutRedirectURI string `json:"postLogoutRedirectURI"`
+	// PKCEEnable 是否启用 PKCE。使用指针区分"未配置"与"显式关闭":
+	// 老配置(无该字段)反序列化后为 nil, 按开启处理, 保证升级后保持安全默认。
+	PKCEEnable *bool `json:"pkceEnable"`
+}
+
+// IsPKCEEnable 返回是否启用 PKCE, 未显式配置时默认开启。
+func (o OidcConfig) IsPKCEEnable() bool {
+	return o.PKCEEnable == nil || *o.PKCEEnable
 }
 
 func (a AiConfig) GetEnable() bool {

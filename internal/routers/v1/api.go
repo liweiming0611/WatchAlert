@@ -56,8 +56,15 @@ func Router(engine *gin.Engine) {
 		oidc := v1.Group("oidc")
 		{
 			oidc.GET("oidcInfo", api.SystemController.GetOidcInfo)
+			oidc.GET("authorize", api.SystemController.Authorize)
 			oidc.GET("callback", api.SystemController.CallBack)
+			// response_mode=form_post 的 IdP(Azure AD、ADFS 等)以 POST 表单回调。
+			oidc.POST("callback", api.SystemController.CallBack)
 			oidc.GET("token", api.SystemController.CookieConvertToken)
+			// 退出登录会改变登录态, 用 POST 避免被第三方页面以 <img> 等方式触发强制登出。
+			// GET 保留仅为滚动升级期间未刷新缓存的旧前端可用, 旧前端全部更新后可移除。
+			oidc.POST("logout", api.SystemController.Logout)
+			oidc.GET("logout", api.SystemController.Logout)
 		}
 	}
 }

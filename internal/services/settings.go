@@ -28,6 +28,14 @@ func newInterSettingService(ctx *ctx.Context) InterSettingService {
 func (a settingService) Save(req interface{}) (interface{}, interface{}) {
 	r := req.(*models.Settings)
 
+	// 设置页不回显客户端密钥, 保存时该字段为空, 直接落库会把已配置的密钥清空,
+	// 导致 OIDC 登录整体失效。这里在更新前沿用旧值; 公共客户端(无密钥)本就留空, 不受影响。
+	if a.ctx.DB.Setting().Check() && r.OidcConfig.ClientSecret == "" {
+		if old, err := a.ctx.DB.Setting().Get(); err == nil {
+			r.OidcConfig.ClientSecret = old.OidcConfig.ClientSecret
+		}
+	}
+
 	if a.ctx.DB.Setting().Check() {
 		err := a.ctx.DB.Setting().Update(*r)
 		if err != nil {
